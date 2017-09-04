@@ -1,0 +1,2147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Web Control</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	
+	<script src="jquery-1.11.3.min.js"></script>
+	<script src="mqttws31.js"></script>
+
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+	<!-- Latest compiled and minified CSS -->
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.2/css/bootstrap-select.min.css">
+
+	<!-- Latest compiled and minified JavaScript -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.2/js/bootstrap-select.min.js"></script>
+
+	<!-- (Optional) Latest compiled and minified JavaScript translation files -->
+	<!--script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.2/js/i18n/defaults-*.min.js"></script-->
+
+	<script src="raphael-2.1.4.min.js"></script>
+	<script src="justgage.js"></script>
+
+	<link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
+	<script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script> 
+</head>
+
+<style>
+	body {
+		font-family: Arial, Helvetica, sans-serif;
+		background: url() no-repeat center center fixed; 
+		-webkit-background-size: cover;
+		-moz-background-size: cover;
+		-o-background-size: cover;
+		background-size: cover;
+
+	}
+
+	h1{
+		background: #00AE04;
+	}
+
+	h3{
+
+
+	}
+
+	li{
+		background: ;
+
+	}
+
+	#status {
+		background: #333;
+		color: #FFF;
+		border-radius: 3px;
+		font-weight: bold;
+		padding: 3px 6px;
+	}
+	#status.connect {
+		background: #E18C1A;
+		color: #FFF;
+	}
+	#status.connected {
+		background: #00AE04;
+		color: #FFF;
+	}
+	#status.error {
+		background: #F00;
+		color: #FFF;
+	}
+	button{
+		font-size: 20px;
+	}
+	select{
+		font-size: 20px;
+	}
+	#showtime1.connected,#showtime2.connected,#showtime3.connected,#showtime4.connected {
+		background: #00AE04;
+		color: #FFF;
+	}
+	#showtime1.connect,#showtime2.connect,#showtime3.connect,#showtime4.connect {
+		background: #E18C1A;
+		color: #FFF;
+	}
+
+	.tab-content{
+
+		
+		
+	}
+
+</style>
+
+
+<style>
+	body {
+
+	}
+
+	#g1 {
+		width:300px; height:240px;
+		
+		margin: 1em;
+	}
+
+	#g2, #g3, #g4 {
+		width:100px; height:80px;
+		display: inline-block;
+		margin: 1em;
+	}
+
+	p {
+		display: block;
+		width: 450px;
+		margin: 2em auto;
+		text-align: left;
+	}
+</style>
+
+<script>
+	var config = {
+		mqtt_server: "your server",
+		mqtt_websockets_port: ,
+		mqtt_user: "your port",
+		mqtt_password: "your password"
+	};
+	var g1, g2, g3, g4;
+	
+	$(document).ready(function(e) {
+
+		$(".nav-tabs a").click(function(){
+			$(this).tab('show');
+		});
+		var g1 = new JustGage({
+			id: "g1",
+			value: 0,
+			min: 0,
+			max: 100,
+			title: "Moisture of Soil",
+			label: "%"
+		});
+		//$('.mdb-select').material_select();
+	// Create a client instance
+	client = new Paho.MQTT.Client(config.mqtt_server, config.mqtt_websockets_port, "web_" + parseInt(Math.random() * 100, 10)); 
+	//Example client = new Paho.MQTT.Client("m11.cloudmqtt.com", 32903, "web_" + parseInt(Math.random() * 100, 10));
+	
+	// connect the client
+	client.connect({
+		useSSL: true,
+		userName: config.mqtt_user,
+		password: config.mqtt_password,
+		onSuccess: function() {
+			// Once a connection has been made, make a subscription and send a message.
+			// console.log("onConnect");
+			$("#status").text("Connected").removeClass().addClass("connected");
+			client.subscribe("/ESP/LED");
+			client.subscribe("/setdevice1");
+			client.subscribe("/setdevice2");
+			client.subscribe("/setdevice3");
+			client.subscribe("/setdevice4");
+			client.subscribe("/ESP/temp");
+			client.subscribe("/ESP/SMART");
+
+/*	
+			mqttSend("/ESP/LED", "GET");
+			mqttSend("/setdevice1", "GET-TIME");
+			mqttSend("/setdevice2", "GET-TIME");
+			mqttSend("/setdevice3", "GET-TIME");
+			mqttSend("/setdevice4", "GET-TIME");
+
+			*/
+			/*
+			mqttSend("/ESP/LED","GET-State_F1");
+			mqttSend("/ESP/LED","GET-State_F2");
+			mqttSend("/ESP/LED","GET-State_F3");
+			mqttSend("/ESP/LED","GET-State_F4");
+			*/
+			mqttSend("/ESP/LED","Soil");
+
+		},
+		onFailure: function(e) {
+			$("#status").text("Error : " + e).removeClass().addClass("error");
+			// console.log(e);
+		}
+	});
+	
+	client.onConnectionLost = function(responseObject) {
+		if (responseObject.errorCode !== 0) {
+			$("#status").text("onConnectionLost:" + responseObject.errorMessage).removeClass().addClass("connect");
+			setTimeout(function() { client.connect() }, 1000);
+		}
+	}
+	
+	client.onMessageArrived = function(message) {
+		// $("#status").text("onMessageArrived:" + message.payloadString).removeClass().addClass("error");
+		//destinationName >>>> topic
+
+		console.log(message.payloadString);
+		console.log(message.destinationName);
+		if(message.destinationName =="/ESP/SMART" && message.payloadString.length == 8){
+
+			if(message.payloadString[4] == "1") $('#V1').bootstrapToggle('on');
+			if(message.payloadString[5] == "1") $('#V2').bootstrapToggle('on');
+			if(message.payloadString[6] == "1") $('#V3').bootstrapToggle('on');
+			if(message.payloadString[7] == "1") $('#V4').bootstrapToggle('on');
+
+			if(message.payloadString[4] == "0") $('#V1').bootstrapToggle('off');
+			if(message.payloadString[5] == "0") $('#V2').bootstrapToggle('off');
+			if(message.payloadString[6] == "0") $('#V3').bootstrapToggle('off');
+			if(message.payloadString[7] == "0") $('#V4').bootstrapToggle('off');
+
+		}
+
+		if (message.payloadString == "LEDON" || message.payloadString == "LEDOFF") {
+			$("#led-on").attr("disabled", (message.payloadString == "LEDON" ? true : false));
+			$("#led-off").attr("disabled", (message.payloadString == "LEDOFF" ? true : false));
+		}
+		if (message.payloadString == "LEDON1" || message.payloadString == "LEDOFF1") {
+			$("#led-on1").attr("disabled", (message.payloadString == "LEDON1" ? true : false));
+			$("#led-off1").attr("disabled", (message.payloadString == "LEDOFF1" ? true : false));
+		}
+		if (message.payloadString == "LEDON2" || message.payloadString == "LEDOFF2") {
+			$("#led-on2").attr("disabled", (message.payloadString == "LEDON2" ? true : false));
+			$("#led-off2").attr("disabled", (message.payloadString == "LEDOFF2" ? true : false));
+		}
+		if (message.payloadString == "LEDON3" || message.payloadString == "LEDOFF3") {
+			$("#led-on3").attr("disabled", (message.payloadString == "LEDON3" ? true : false));
+			$("#led-off3").attr("disabled", (message.payloadString == "LEDOFF3" ? true : false));
+		}
+		if(message.destinationName == "/ESP/temp" && message.payloadString !="Soil" && message.payloadString != "Closed"){
+			var percent = message.payloadString;
+			percent = parseInt(percent);
+			g1.refresh(percent);
+			console.log(percent);
+		}
+		if(message.destinationName == "/setdevice1" && message.payloadString != "OFF" && message.payloadString.length == 12){
+
+			$("#showtime1").text("เปิด "+message.payloadString[0]+message.payloadString[1]+":"+message.payloadString[2]+message.payloadString[3]+":"+message.payloadString[4]+message.payloadString[5]+"  ปิด "+message.payloadString[6]+message.payloadString[7]+":"+message.payloadString[8]+message.payloadString[9]+":"+message.payloadString[10]+message.payloadString[11]).removeClass().addClass("connected");
+				//document.getElementById("cbox_device1on").checked = true;
+			}
+			if(message.destinationName == "/setdevice2" && message.payloadString != "OFF" && message.payloadString.length == 12){
+
+				$("#showtime2").text("เปิด "+message.payloadString[0]+message.payloadString[1]+":"+message.payloadString[2]+message.payloadString[3]+":"+message.payloadString[4]+message.payloadString[5]+"  ปิด "+message.payloadString[6]+message.payloadString[7]+":"+message.payloadString[8]+message.payloadString[9]+":"+message.payloadString[10]+message.payloadString[11]).removeClass().addClass("connected");
+				//document.getElementById("cbox_device2on").checked = true;
+			}
+			if(message.destinationName == "/setdevice3" && message.payloadString != "OFF" && message.payloadString.length == 12){
+
+				$("#showtime3").text("เปิด "+message.payloadString[0]+message.payloadString[1]+":"+message.payloadString[2]+message.payloadString[3]+":"+message.payloadString[4]+message.payloadString[5]+"  ปิด "+message.payloadString[6]+message.payloadString[7]+":"+message.payloadString[8]+message.payloadString[9]+":"+message.payloadString[10]+message.payloadString[11]).removeClass().addClass("connected");
+				//document.getElementById("cbox_device3on").checked = true;
+			}
+			if(message.destinationName == "/setdevice4" && message.payloadString!="OFF" && message.payloadString.length == 12){
+
+				$("#showtime4").text("เปิด "+message.payloadString[0]+message.payloadString[1]+":"+message.payloadString[2]+message.payloadString[3]+":"+message.payloadString[4]+message.payloadString[5]+"  ปิด "+message.payloadString[6]+message.payloadString[7]+":"+message.payloadString[8]+message.payloadString[9]+":"+message.payloadString[10]+message.payloadString[11]).removeClass().addClass("connected");
+				//document.getElementById("cbox_device4on").checked = true;
+			}
+			if(message.destinationName == "/setdevice1" && message.payloadString == "OFF"){
+				$("#showtime1").text("ยังไม่ตั้งเวลา").removeClass().addClass("connect");
+
+			}
+			if(message.destinationName == "/setdevice2" && message.payloadString == "OFF"){
+				$("#showtime2").text("ยังไม่ตั้งเวลา").removeClass().addClass("connect");
+				
+			}
+			if(message.destinationName == "/setdevice3" && message.payloadString == "OFF"){
+				$("#showtime3").text("ยังไม่ตั้งเวลา").removeClass().addClass("connect");
+				
+			}
+			if(message.destinationName == "/setdevice4" && message.payloadString == "OFF"){
+				$("#showtime4").text("ยังไม่ตั้งเวลา").removeClass().addClass("connect");
+				
+			}
+			
+			if(message.destinationName == "/ESP/LED"){
+				if(message.payloadString == "111"){
+					document.getElementById("F1_1").checked = true;
+				}
+				if(message.payloadString == "110"){
+					document.getElementById("F1_1").checked = false;
+				}
+			}
+
+			if(message.destinationName == "/ESP/LED" ){
+				if(message.payloadString == "121"){
+					document.getElementById("F1_2").checked = true;
+				}
+				if(message.payloadString == "120"){
+					document.getElementById("F1_2").checked = false;
+				}
+
+			}
+
+			if(message.destinationName == "/ESP/LED"){
+				if(message.payloadString == "211"){
+					document.getElementById("F2_1").checked = true;
+				}
+				if(message.payloadString == "210"){
+					document.getElementById("F2_1").checked = false;
+				}
+			}
+
+			if(message.destinationName == "/ESP/LED"){
+				if(message.payloadString == "221"){
+					document.getElementById("F2_2").checked = true;
+				}
+				if(message.payloadString == "220"){
+					document.getElementById("F2_2").checked = false;
+				}
+			}
+
+			if(message.destinationName == "/ESP/LED"){
+				if(message.payloadString == "311"){
+					document.getElementById("F3_1").checked = true;
+				}
+				if(message.payloadString == "310"){
+					document.getElementById("F3_1").checked = false;
+				}
+			}
+
+			
+			if(message.destinationName == "/ESP/LED"){
+				if(message.payloadString == "321"){
+					document.getElementById("F3_2").checked = true;
+				}
+				if(message.payloadString == "320"){
+					document.getElementById("F3_2").checked = false;
+				}
+			}
+			
+			if(message.destinationName == "/ESP/LED"){
+				if(message.payloadString == "411"){
+					document.getElementById("F4_1").checked = true;
+				}
+				if(message.payloadString == "410"){
+					document.getElementById("F4_1").checked = false;
+				}
+			}
+
+			if(message.destinationName == "/ESP/LED"){
+				if(message.payloadString == "421"){
+					document.getElementById("F4_2").checked = true;
+				}
+				if(message.payloadString == "420"){
+					document.getElementById("F4_2").checked = false;
+				}
+			}
+
+		}
+
+		$("#led-on").click(function(e) {
+			mqttSend("/ESP/LED", "LEDON");
+		});
+		
+		$("#led-off").click(function(e) {
+			mqttSend("/ESP/LED", "LEDOFF");
+		});
+
+		$("#led-on1").click(function(e) {
+			mqttSend("/ESP/LED", "LEDON1");
+		});
+		
+		$("#led-off1").click(function(e) {
+			mqttSend("/ESP/LED", "LEDOFF1");
+		});
+
+		$("#led-on2").click(function(e){
+			mqttSend("/ESP/LED","LEDON2");
+		});
+		$("#led-off2").click(function(e){
+			mqttSend("/ESP/LED","LEDOFF2");
+		});
+
+
+		$("#led-on3").click(function(e){
+			mqttSend("/ESP/LED","LEDON3");
+		});
+		$("#led-off3").click(function(e){
+			mqttSend("/ESP/LED","LEDOFF3");
+		});
+
+		$("#set-time1").click(function(e){
+			var h_on = document.getElementById("sethouron1");
+			var m_on = document.getElementById("setminon1");
+			var s_on = document.getElementById("setsecon1");
+
+			var h_off = document.getElementById("sethouroff1");
+			var m_off = document.getElementById("setminoff1");
+			var s_off = document.getElementById("setsecoff1");
+
+			var h_txt_on = h_on.options[h_on.selectedIndex].text;
+			var m_txt_on = m_on.options[m_on.selectedIndex].text;
+			var s_txt_on = s_on.options[s_on.selectedIndex].text;
+
+			var h_txt_off = h_off.options[h_off.selectedIndex].text;
+			var m_txt_off = m_off.options[m_off.selectedIndex].text;
+			var s_txt_off = s_off.options[s_off.selectedIndex].text;
+
+			mqttSend("/setdevice1",h_txt_on+m_txt_on+s_txt_on+h_txt_off+m_txt_off+s_txt_off);
+
+			$("#showtime1").text("เปิด "+h_txt_on+":"+m_txt_on+":"+s_txt_on+"  ปิด "+h_txt_off+":"+m_txt_off+":"+s_txt_off).removeClass().addClass("connected");
+			
+		});
+
+		$("#set-time2").click(function(e){
+			var h_on = document.getElementById("sethouron2");
+			var m_on = document.getElementById("setminon2");
+			var s_on = document.getElementById("setsecon2");
+
+			var h_off = document.getElementById("sethouroff2");
+			var m_off = document.getElementById("setminoff2");
+			var s_off = document.getElementById("setsecoff2");
+
+			var h_txt_on = h_on.options[h_on.selectedIndex].text;
+			var m_txt_on = m_on.options[m_on.selectedIndex].text;
+			var s_txt_on = s_on.options[s_on.selectedIndex].text;
+
+			var h_txt_off = h_off.options[h_off.selectedIndex].text;
+			var m_txt_off = m_off.options[m_off.selectedIndex].text;
+			var s_txt_off = s_off.options[s_off.selectedIndex].text;
+
+			mqttSend("/setdevice2",h_txt_on+m_txt_on+s_txt_on+h_txt_off+m_txt_off+s_txt_off);
+
+			$("#showtime2").text("เปิด "+h_txt_on+":"+m_txt_on+":"+s_txt_on+"  ปิด "+h_txt_off+":"+m_txt_off+":"+s_txt_off).removeClass().addClass("connected");
+		});
+
+		$("#set-time3").click(function(e){
+			var h_on = document.getElementById("sethouron3");
+			var m_on = document.getElementById("setminon3");
+			var s_on = document.getElementById("setsecon3");
+
+			var h_off = document.getElementById("sethouroff3");
+			var m_off = document.getElementById("setminoff3");
+			var s_off = document.getElementById("setsecoff3");
+
+			var h_txt_on = h_on.options[h_on.selectedIndex].text;
+			var m_txt_on = m_on.options[m_on.selectedIndex].text;
+			var s_txt_on = s_on.options[s_on.selectedIndex].text;
+
+			var h_txt_off = h_off.options[h_off.selectedIndex].text;
+			var m_txt_off = m_off.options[m_off.selectedIndex].text;
+			var s_txt_off = s_off.options[s_off.selectedIndex].text;
+
+			mqttSend("/setdevice3",h_txt_on+m_txt_on+s_txt_on+h_txt_off+m_txt_off+s_txt_off);
+			$("#showtime3").text("เปิด "+h_txt_on+":"+m_txt_on+":"+s_txt_on+"  ปิด "+h_txt_off+":"+m_txt_off+":"+s_txt_off).removeClass().addClass("connected");
+		});
+
+		$("#set-time4").click(function(e){
+			var h_on = document.getElementById("sethouron4");
+			var m_on = document.getElementById("setminon4");
+			var s_on = document.getElementById("setsecon4");
+
+			var h_off = document.getElementById("sethouroff4");
+			var m_off = document.getElementById("setminoff4");
+			var s_off = document.getElementById("setsecoff4");
+
+			var h_txt_on = h_on.options[h_on.selectedIndex].text;
+			var m_txt_on = m_on.options[m_on.selectedIndex].text;
+			var s_txt_on = s_on.options[s_on.selectedIndex].text;
+
+			var h_txt_off = h_off.options[h_off.selectedIndex].text;
+			var m_txt_off = m_off.options[m_off.selectedIndex].text;
+			var s_txt_off = s_off.options[s_off.selectedIndex].text;
+
+			mqttSend("/setdevice4",h_txt_on+m_txt_on+s_txt_on+h_txt_off+m_txt_off+s_txt_off);
+			$("#showtime4").text("เปิด "+h_txt_on+":"+m_txt_on+":"+s_txt_on+"  ปิด "+h_txt_off+":"+m_txt_off+":"+s_txt_off).removeClass().addClass("connected");
+		});
+
+
+
+		$("#cbox_device1on").change(function() {
+
+			if(this.checked) {
+				console.log("Checked");
+				$("#sethouron1").attr("disabled",false);
+				$("#setminon1").attr("disabled",false);
+				$("#setsecon1").attr("disabled",false);
+				$("#sethouroff1").attr("disabled",false);
+				$("#setminoff1").attr("disabled",false);
+				$("#setsecoff1").attr("disabled",false);
+
+				$("#set-time1").attr("disabled",false);
+			}
+			else{
+				document.getElementById("sethouron1").disabled = true;
+				$("#sethouron1").attr("disabled",true);
+				$("#setminon1").attr("disabled",true);
+				$("#setsecon1").attr("disabled",true);
+				$("#sethouroff1").attr("disabled",true);
+				$("#setminoff1").attr("disabled",true);
+				$("#setsecoff1").attr("disabled",true);
+
+				$("#set-time1").attr("disabled",true);
+
+				mqttSend("/setdevice1","OFF");
+			}
+		});
+
+/*		$("#cbox_device1off").change(function() {
+    		if(this.checked) {
+        		$("#sethouroff1").attr("disabled",false);
+        		$("#setminoff1").attr("disabled",false);
+        		$("#setsecoff1").attr("disabled",false);
+        		$("#set-time1").attr("disabled",false);
+    		}
+    		else{
+    			$("#sethouroff1").attr("disabled",true);
+        		$("#setminoff1").attr("disabled",true);
+        		$("#setsecoff1").attr("disabled",true);
+        		$("#set-time1").attr("disabled",true);
+
+    		}
+    	});*/
+
+    	$("#cbox_device2on").change(function() {
+    		if(this.checked) {
+
+    			$("#sethouron2").attr("disabled",false);
+    			$("#setminon2").attr("disabled",false);
+    			$("#setsecon2").attr("disabled",false);
+    			$("#set-time2").attr("disabled",false);
+    			$("#sethouroff2").attr("disabled",false);
+    			$("#setminoff2").attr("disabled",false);
+    			$("#setsecoff2").attr("disabled",false);
+
+    			$("#set-time2").attr("disabled",false);
+    		}
+    		else{
+    			$("#sethouron2").attr("disabled",true);
+    			$("#setminon2").attr("disabled",true);
+    			$("#setsecon2").attr("disabled",true);
+    			$("#sethouroff2").attr("disabled",true);
+    			$("#setminoff2").attr("disabled",true);
+    			$("#setsecoff2").attr("disabled",true);
+
+    			$("#set-time2").attr("disabled",true);
+    			mqttSend("/setdevice2","OFF");
+    		}
+    	});
+
+/*		$("#cbox_device2off").change(function() {
+    		if(this.checked) {
+        		$("#sethouroff2").attr("disabled",false);
+        		$("#setminoff2").attr("disabled",false);
+        		$("#setsecoff2").attr("disabled",false);
+        		$("#set-time2").attr("disabled",false);
+    		}
+    		else{
+    			$("#sethouroff2").attr("disabled",true);
+        		$("#setminoff2").attr("disabled",true);
+        		$("#setsecoff2").attr("disabled",true);
+        		$("#set-time2").attr("disabled",true);
+    		}
+    	});*/
+
+    	$("#cbox_device3on").change(function() {
+    		if(this.checked) {
+    			$("#sethouron3").attr("disabled",false);
+    			$("#setminon3").attr("disabled",false);
+    			$("#setsecon3").attr("disabled",false);
+    			$("#sethouroff3").attr("disabled",false);
+    			$("#setminoff3").attr("disabled",false);
+    			$("#setsecoff3").attr("disabled",false);
+
+    			$("#set-time3").attr("disabled",false);
+
+    		}
+    		else{
+    			$("#sethouron3").attr("disabled",true);
+    			$("#setminon3").attr("disabled",true);
+    			$("#setsecon3").attr("disabled",true);
+    			$("#sethouroff3").attr("disabled",true);
+    			$("#setminoff3").attr("disabled",true);
+    			$("#setsecoff3").attr("disabled",true);
+
+    			$("#set-time3").attr("disabled",true);
+    			mqttSend("/setdevice3","OFF");
+    		}
+    	});
+    	
+ /*   	$("#cbox_device3off").change(function() {
+    		if(this.checked) {
+        		$("#sethouroff3").attr("disabled",false);
+        		$("#setminoff3").attr("disabled",false);
+        		$("#setsecoff3").attr("disabled",false);
+        		$("#set-time3").attr("disabled",false);
+    		}
+    		else{
+    			$("#sethouroff3").attr("disabled",true);
+        		$("#setminoff3").attr("disabled",true);
+        		$("#setsecoff3").attr("disabled",true);
+				$("#set-time3").attr("disabled",true);
+    		}
+    	});*/
+
+    	$("#cbox_device4on").change(function() {
+    		if(this.checked) {
+    			$("#sethouron4").attr("disabled",false);
+    			$("#setminon4").attr("disabled",false);
+    			$("#setsecon4").attr("disabled",false);
+    			$("#sethouroff4").attr("disabled",false);
+    			$("#setminoff4").attr("disabled",false);
+    			$("#setsecoff4").attr("disabled",false);
+
+    			$("#set-time4").attr("disabled",false);
+    		}
+    		else{
+    			$("#sethouron4").attr("disabled",true);
+    			$("#setminon4").attr("disabled",true);
+    			$("#setsecon4").attr("disabled",true);
+    			$("#sethouroff4").attr("disabled",true);
+    			$("#setminoff4").attr("disabled",true);
+    			$("#setsecoff4").attr("disabled",true);
+
+    			$("#set-time4").attr("disabled",true);	
+    			mqttSend("/setdevice4","OFF");
+    		}
+    	});
+
+ /*   	$("#cbox_device4off").change(function() {
+    		if(this.checked) {
+        		$("#sethouroff4").attr("disabled",false);
+        		$("#setminoff4").attr("disabled",false);
+        		$("#setsecoff4").attr("disabled",false);
+        		$("#set-time4").attr("disabled",false);
+    		}
+    		else{
+    			$("#sethouroff4").attr("disabled",true);
+        		$("#setminoff4").attr("disabled",true);
+        		$("#setsecoff4").attr("disabled",true);
+        		$("#set-time4").attr("disabled",true);
+    		}
+    	});*/
+
+
+   /* $("#Send").click(function(e) {
+        mqttSend("/ESP/temp", "Test");
+    });
+    */
+
+
+    $("#F1_1").change(function() {
+    	if(this.checked) {
+    		mqttSend("/ESP/LED","F1_1_1");
+    	}
+    	else{
+    		mqttSend("/ESP/LED","F1_1_0");
+    	}
+    });
+
+    $("#F1_2").change(function() {
+    	if(this.checked) {
+    		mqttSend("/ESP/LED","F1_2_1");
+    	}
+    	else{
+    		mqttSend("/ESP/LED","F1_2_0");
+    	}
+    });
+    
+    $("#F2_1").change(function() {
+    	if(this.checked) {
+    		mqttSend("/ESP/LED","F2_1_1");
+    	}
+    	else{
+    		mqttSend("/ESP/LED","F2_1_0");
+    	}
+    });
+    
+    $("#F2_2").change(function() {
+    	if(this.checked) {
+    		mqttSend("/ESP/LED","F2_2_1");
+    	}
+    	else{
+    		mqttSend("/ESP/LED","F2_2_0");
+    	}
+    });
+    
+    $("#F3_1").change(function() {
+    	if(this.checked) {
+    		mqttSend("/ESP/LED","F3_1_1");
+    	}
+    	else{
+    		mqttSend("/ESP/LED","F3_1_0");
+    	}
+    });
+
+    
+    $("#F3_2").change(function() {
+    	if(this.checked) {
+    		mqttSend("/ESP/LED","F3_2_1");
+    	}
+    	else{
+    		mqttSend("/ESP/LED","F3_2_0");
+    	}
+    });
+
+    $("#F4_1").change(function() {
+    	if(this.checked) {
+    		mqttSend("/ESP/LED","F4_1_1");
+    	}
+    	else{
+    		mqttSend("/ESP/LED","F4_1_0");
+    	}
+    });
+
+    $("#F4_2").change(function() {
+    	if(this.checked) {
+    		mqttSend("/ESP/LED","F4_2_1");
+    	}
+    	else{
+    		mqttSend("/ESP/LED","F4_2_0");
+    	}
+    });
+
+
+
+    $("#Smart_Save").click(function(e){
+    	var moi = document.getElementById("setmoisture");
+    	var time = document.getElementById("settime");
+
+
+    	var moi_txt = moi.options[moi.selectedIndex].text;
+    	var time_txt = time.options[time.selectedIndex].text;
+    	var v1="0";
+    	var v2="0";
+    	var v3="0";
+    	var v4="0";
+
+    	if($("#V1").is(':checked')) v1="1";
+    	if($("#V2").is(':checked')) v2="1";
+    	if($("#V3").is(':checked')) v3="1";
+    	if($("#V4").is(':checked')) v4="1";
+    	mqttSend("/ESP/SMART",moi_txt+time_txt+v1+v2+v3+v4);
+    //	$("#showtime2").text("เปิด "+h_txt_on+":"+m_txt_on+":"+s_txt_on+"  ปิด "+h_txt_off+":"+m_txt_off+":"+s_txt_off).removeClass().addClass("connected");
+});
+
+
+    $(window).on("unload", function(e) {
+    	mqttSend("/ESP/LED", "Closed");
+    });
+
+
+});
+
+var mqttSend = function(topic, msg) {
+	var message = new Paho.MQTT.Message(msg);
+	message.destinationName = topic;
+	client.send(message); 
+}
+function Home(){
+
+	mqttSend("/ESP/LED","Soil");
+}
+
+function V1(){
+	mqttSend("/ESP/LED", "GET1");
+	mqttSend("/setdevice1", "GET-TIME");
+	mqttSend("/ESP/LED", "Closed");
+}
+function V2(){
+
+	mqttSend("/ESP/LED", "GET2");
+	mqttSend("/setdevice2", "GET-TIME");
+	mqttSend("/ESP/LED", "Closed");
+}
+function V3(){
+	mqttSend("/ESP/LED", "GET3");
+	mqttSend("/setdevice3", "GET-TIME");
+	mqttSend("/ESP/LED", "Closed");
+}
+function V4(){
+	mqttSend("/ESP/LED", "GET4");
+	mqttSend("/setdevice4", "GET-TIME");
+	mqttSend("/ESP/LED", "Closed");
+}
+
+function Smart(){
+	mqttSend("/ESP/LED", "SMART");
+	mqttSend("/ESP/LED", "Closed");
+}
+
+</script>
+
+
+<body>
+
+	<div class="container">
+		<h2>Web Control</h2>
+		<ul class="nav nav-tabs">
+			<li class="active" onclick="Home()"><a href="#home">หน้าแรก</a></li>
+			<li><a href="#menu1" onclick="V1()">วาล์ว 1</a></li>
+			<li><a href="#menu2" onclick="V2()">วาล์ว 2</a></li>
+			<li><a href="#menu3" onclick="V3()">วาล์ว 3</a></li>
+			<li><a href="#menu4" onclick="V4()">วาล์ว 4</a></li>
+			<li><a href="#Smart" onclick="Smart()">ระบบอัจฉริยะ</a></li>
+		</ul>
+
+		<div class="tab-content">
+			<div id="home" class="tab-pane fade in active">
+				<h3>สถานะโดยรวม</h3>
+				<span id="status" class="connect">Connect...</span>
+				<br></br>
+				<div id="g1"></div>
+			</div>
+			<div id="menu1" class="tab-pane fade">
+				<h3>วาล์ว 1</h3>
+				<button id="led-on" disabled class="btn btn-default">เปิด</button>&nbsp;&nbsp;&nbsp;<button id="led-off" disabled class="btn btn-default">ปิด</button> 
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+				<br></br>
+				<!--<span><input type="checkbox" id="cbox_device1on" > ตั้งเวลา</span>-->
+				<input type="checkbox" id="F1_1" value="F1_on" > ปุ๋ย 1</span>
+				<input type="checkbox" id="F1_2" value="F2_on" > ปุ๋ย 2</span>
+				<br></br>
+				<span >ตั้งเวลาเปิด</span>
+
+				<select id="sethouron1" class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+				</select> 
+				&nbsp;
+				<select id="setminon1" class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+					<option value="32">32</option>
+					<option value="33">33</option>
+					<option value="34">34</option>
+					<option value="35">35</option>
+					<option value="36">36</option>
+					<option value="37">37</option>
+					<option value="38">38</option>
+					<option value="39">39</option>
+					<option value="40">40</option>
+					<option value="41">41</option>
+					<option value="42">42</option>
+					<option value="43">43</option>
+					<option value="44">44</option>
+					<option value="45">45</option>
+					<option value="46">46</option>
+					<option value="47">47</option>
+					<option value="48">48</option>
+					<option value="49">49</option>
+					<option value="50">50</option>
+					<option value="51">51</option>
+					<option value="52">52</option>
+					<option value="53">53</option>
+					<option value="54">54</option>
+					<option value="55">55</option>
+					<option value="56">56</option>
+					<option value="57">57</option>
+					<option value="58">58</option>
+					<option value="59">59</option>
+				</select>
+				&nbsp;
+				<select id="setsecon1" class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+					<option value="32">32</option>
+					<option value="33">33</option>
+					<option value="34">34</option>
+					<option value="35">35</option>
+					<option value="36">36</option>
+					<option value="37">37</option>
+					<option value="38">38</option>
+					<option value="39">39</option>
+					<option value="40">40</option>
+					<option value="41">41</option>
+					<option value="42">42</option>
+					<option value="43">43</option>
+					<option value="44">44</option>
+					<option value="45">45</option>
+					<option value="46">46</option>
+					<option value="47">47</option>
+					<option value="48">48</option>
+					<option value="49">49</option>
+					<option value="50">50</option>
+					<option value="51">51</option>
+					<option value="52">52</option>
+					<option value="53">53</option>
+					<option value="54">54</option>
+					<option value="55">55</option>
+					<option value="56">56</option>
+					<option value="57">57</option>
+					<option value="58">58</option>
+					<option value="59">59</option>
+				</select>
+				&nbsp; 
+				<span id="showtime1" class="connect">ยังไม่ตั้งเวลา</span>
+				<br></br>
+				<!--<span><input type="checkbox" id="cbox_device1off" value="device1_off"> ตั้งเวลา</span>-->
+				<span>ตั้งเวลาปิด</span>&nbsp;
+				<select id="sethouroff1"  class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+				</select> 
+				&nbsp;
+				<select id="setminoff1" class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+					<option value="32">32</option>
+					<option value="33">33</option>
+					<option value="34">34</option>
+					<option value="35">35</option>
+					<option value="36">36</option>
+					<option value="37">37</option>
+					<option value="38">38</option>
+					<option value="39">39</option>
+					<option value="40">40</option>
+					<option value="41">41</option>
+					<option value="42">42</option>
+					<option value="43">43</option>
+					<option value="44">44</option>
+					<option value="45">45</option>
+					<option value="46">46</option>
+					<option value="47">47</option>
+					<option value="48">48</option>
+					<option value="49">49</option>
+					<option value="50">50</option>
+					<option value="51">51</option>
+					<option value="52">52</option>
+					<option value="53">53</option>
+					<option value="54">54</option>
+					<option value="55">55</option>
+					<option value="56">56</option>
+					<option value="57">57</option>
+					<option value="58">58</option>
+					<option value="59">59</option>
+				</select>
+				&nbsp;
+				<select id="setsecoff1" class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+					<option value="32">32</option>
+					<option value="33">33</option>
+					<option value="34">34</option>
+					<option value="35">35</option>
+					<option value="36">36</option>
+					<option value="37">37</option>
+					<option value="38">38</option>
+					<option value="39">39</option>
+					<option value="40">40</option>
+					<option value="41">41</option>
+					<option value="42">42</option>
+					<option value="43">43</option>
+					<option value="44">44</option>
+					<option value="45">45</option>
+					<option value="46">46</option>
+					<option value="47">47</option>
+					<option value="48">48</option>
+					<option value="49">49</option>
+					<option value="50">50</option>
+					<option value="51">51</option>
+					<option value="52">52</option>
+					<option value="53">53</option>
+					<option value="54">54</option>
+					<option value="55">55</option>
+					<option value="56">56</option>
+					<option value="57">57</option>
+					<option value="58">58</option>
+					<option value="59">59</option>
+				</select>
+				<button id="set-time1" class="btn btn-default">ตั้งเวลา</button>
+			</div>
+			<div id="menu2" class="tab-pane fade">
+				<h3>วาล์ว 2</h3>
+				<button id="led-on1" disabled class="btn btn-default">เปิด</button>&nbsp;&nbsp;&nbsp;<button id="led-off1" disabled class="btn btn-default">ปิด</button>
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+				<br></br>
+				<!--<span><input type="checkbox" id="cbox_device2on" value="device2_on"> ตั้งเวลา</span>-->
+				<input type="checkbox" id="F2_1" value="F1_on" > ปุ๋ย 1</span>
+				<input type="checkbox" id="F2_2" value="F2_on" > ปุ๋ย 2</span>
+				<br></br>
+				<span >ตั้งเวลาเปิด</span>
+
+				<select id="sethouron2" class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+				</select> 
+				&nbsp;
+				<select id="setminon2"  class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+					<option value="32">32</option>
+					<option value="33">33</option>
+					<option value="34">34</option>
+					<option value="35">35</option>
+					<option value="36">36</option>
+					<option value="37">37</option>
+					<option value="38">38</option>
+					<option value="39">39</option>
+					<option value="40">40</option>
+					<option value="41">41</option>
+					<option value="42">42</option>
+					<option value="43">43</option>
+					<option value="44">44</option>
+					<option value="45">45</option>
+					<option value="46">46</option>
+					<option value="47">47</option>
+					<option value="48">48</option>
+					<option value="49">49</option>
+					<option value="50">50</option>
+					<option value="51">51</option>
+					<option value="52">52</option>
+					<option value="53">53</option>
+					<option value="54">54</option>
+					<option value="55">55</option>
+					<option value="56">56</option>
+					<option value="57">57</option>
+					<option value="58">58</option>
+					<option value="59">59</option>
+				</select>
+				&nbsp;
+				<select id="setsecon2"  class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+					<option value="32">32</option>
+					<option value="33">33</option>
+					<option value="34">34</option>
+					<option value="35">35</option>
+					<option value="36">36</option>
+					<option value="37">37</option>
+					<option value="38">38</option>
+					<option value="39">39</option>
+					<option value="40">40</option>
+					<option value="41">41</option>
+					<option value="42">42</option>
+					<option value="43">43</option>
+					<option value="44">44</option>
+					<option value="45">45</option>
+					<option value="46">46</option>
+					<option value="47">47</option>
+					<option value="48">48</option>
+					<option value="49">49</option>
+					<option value="50">50</option>
+					<option value="51">51</option>
+					<option value="52">52</option>
+					<option value="53">53</option>
+					<option value="54">54</option>
+					<option value="55">55</option>
+					<option value="56">56</option>
+					<option value="57">57</option>
+					<option value="58">58</option>
+					<option value="59">59</option>
+				</select>
+				&nbsp;
+				<span id="showtime2" class="connect">ยังไม่ตั้งเวลา</span>
+				<br></br>
+				<!--<span><input type="checkbox" id="cbox_device2off" value="device2_off"> ตั้งเวลา</span>-->
+				<span>ตั้งเวลาปิด</span>&nbsp;
+				<select id="sethouroff2" class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+				</select> 
+				&nbsp;
+				<select id="setminoff2"  class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+					<option value="32">32</option>
+					<option value="33">33</option>
+					<option value="34">34</option>
+					<option value="35">35</option>
+					<option value="36">36</option>
+					<option value="37">37</option>
+					<option value="38">38</option>
+					<option value="39">39</option>
+					<option value="40">40</option>
+					<option value="41">41</option>
+					<option value="42">42</option>
+					<option value="43">43</option>
+					<option value="44">44</option>
+					<option value="45">45</option>
+					<option value="46">46</option>
+					<option value="47">47</option>
+					<option value="48">48</option>
+					<option value="49">49</option>
+					<option value="50">50</option>
+					<option value="51">51</option>
+					<option value="52">52</option>
+					<option value="53">53</option>
+					<option value="54">54</option>
+					<option value="55">55</option>
+					<option value="56">56</option>
+					<option value="57">57</option>
+					<option value="58">58</option>
+					<option value="59">59</option>
+				</select>
+				&nbsp;
+				<select id="setsecoff2"  class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+					<option value="32">32</option>
+					<option value="33">33</option>
+					<option value="34">34</option>
+					<option value="35">35</option>
+					<option value="36">36</option>
+					<option value="37">37</option>
+					<option value="38">38</option>
+					<option value="39">39</option>
+					<option value="40">40</option>
+					<option value="41">41</option>
+					<option value="42">42</option>
+					<option value="43">43</option>
+					<option value="44">44</option>
+					<option value="45">45</option>
+					<option value="46">46</option>
+					<option value="47">47</option>
+					<option value="48">48</option>
+					<option value="49">49</option>
+					<option value="50">50</option>
+					<option value="51">51</option>
+					<option value="52">52</option>
+					<option value="53">53</option>
+					<option value="54">54</option>
+					<option value="55">55</option>
+					<option value="56">56</option>
+					<option value="57">57</option>
+					<option value="58">58</option>
+					<option value="59">59</option>
+				</select>
+				<button id="set-time2" class="btn btn-default">ตั้งเวลา</button>
+			</div>
+			<div id="menu3" class="tab-pane fade">
+				<h3>วาล์ว 3</h3>
+				<button id="led-on2" disabled class="btn btn-default">เปิด</button>&nbsp;&nbsp;&nbsp;<button id="led-off2" disabled class="btn btn-default">ปิด</button> 
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+				<br></br>
+				<!--<span><input type="checkbox" id="cbox_device3on" value="device3_on"> ตั้งเวลา</span>-->
+				<input type="checkbox" id="F3_1" value="F1_on" > ปุ๋ย 1</span>
+				<input type="checkbox" id="F3_2" value="F2_on" > ปุ๋ย 2</span>
+				<br></br>
+				<span >ตั้งเวลาเปิด</span>
+
+				<select id="sethouron3" class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+				</select> 
+				&nbsp;
+				<select id="setminon3"  class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+					<option value="32">32</option>
+					<option value="33">33</option>
+					<option value="34">34</option>
+					<option value="35">35</option>
+					<option value="36">36</option>
+					<option value="37">37</option>
+					<option value="38">38</option>
+					<option value="39">39</option>
+					<option value="40">40</option>
+					<option value="41">41</option>
+					<option value="42">42</option>
+					<option value="43">43</option>
+					<option value="44">44</option>
+					<option value="45">45</option>
+					<option value="46">46</option>
+					<option value="47">47</option>
+					<option value="48">48</option>
+					<option value="49">49</option>
+					<option value="50">50</option>
+					<option value="51">51</option>
+					<option value="52">52</option>
+					<option value="53">53</option>
+					<option value="54">54</option>
+					<option value="55">55</option>
+					<option value="56">56</option>
+					<option value="57">57</option>
+					<option value="58">58</option>
+					<option value="59">59</option>
+				</select>
+				&nbsp;
+				<select id="setsecon3"  class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+					<option value="32">32</option>
+					<option value="33">33</option>
+					<option value="34">34</option>
+					<option value="35">35</option>
+					<option value="36">36</option>
+					<option value="37">37</option>
+					<option value="38">38</option>
+					<option value="39">39</option>
+					<option value="40">40</option>
+					<option value="41">41</option>
+					<option value="42">42</option>
+					<option value="43">43</option>
+					<option value="44">44</option>
+					<option value="45">45</option>
+					<option value="46">46</option>
+					<option value="47">47</option>
+					<option value="48">48</option>
+					<option value="49">49</option>
+					<option value="50">50</option>
+					<option value="51">51</option>
+					<option value="52">52</option>
+					<option value="53">53</option>
+					<option value="54">54</option>
+					<option value="55">55</option>
+					<option value="56">56</option>
+					<option value="57">57</option>
+					<option value="58">58</option>
+					<option value="59">59</option>
+				</select>
+				&nbsp;
+				<span id="showtime3" class="connect">ยังไม่ตั้งเวลา</span>
+				<br></br>
+				<!--<span><input type="checkbox" id="cbox_device3off" value="device3_off"> ตั้งเวลา</span>-->
+				<span>ตั้งเวลาปิด</span>&nbsp;
+				<select id="sethouroff3" class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+				</select> 
+				&nbsp;
+				<select id="setminoff3"  class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+					<option value="32">32</option>
+					<option value="33">33</option>
+					<option value="34">34</option>
+					<option value="35">35</option>
+					<option value="36">36</option>
+					<option value="37">37</option>
+					<option value="38">38</option>
+					<option value="39">39</option>
+					<option value="40">40</option>
+					<option value="41">41</option>
+					<option value="42">42</option>
+					<option value="43">43</option>
+					<option value="44">44</option>
+					<option value="45">45</option>
+					<option value="46">46</option>
+					<option value="47">47</option>
+					<option value="48">48</option>
+					<option value="49">49</option>
+					<option value="50">50</option>
+					<option value="51">51</option>
+					<option value="52">52</option>
+					<option value="53">53</option>
+					<option value="54">54</option>
+					<option value="55">55</option>
+					<option value="56">56</option>
+					<option value="57">57</option>
+					<option value="58">58</option>
+					<option value="59">59</option>
+				</select>
+				&nbsp;
+				<select id="setsecoff3"  class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+					<option value="32">32</option>
+					<option value="33">33</option>
+					<option value="34">34</option>
+					<option value="35">35</option>
+					<option value="36">36</option>
+					<option value="37">37</option>
+					<option value="38">38</option>
+					<option value="39">39</option>
+					<option value="40">40</option>
+					<option value="41">41</option>
+					<option value="42">42</option>
+					<option value="43">43</option>
+					<option value="44">44</option>
+					<option value="45">45</option>
+					<option value="46">46</option>
+					<option value="47">47</option>
+					<option value="48">48</option>
+					<option value="49">49</option>
+					<option value="50">50</option>
+					<option value="51">51</option>
+					<option value="52">52</option>
+					<option value="53">53</option>
+					<option value="54">54</option>
+					<option value="55">55</option>
+					<option value="56">56</option>
+					<option value="57">57</option>
+					<option value="58">58</option>
+					<option value="59">59</option>
+				</select>
+				<button id="set-time3" class="btn btn-default">ตั้งเวลา</button>
+			</div>
+			<div id="menu4" class="tab-pane fade">
+				<h3>วาล์ว 4</h3>
+				<button id="led-on3" disabled class="btn btn-default">เปิด</button>&nbsp;&nbsp;&nbsp;<button id="led-off3" disabled class="btn btn-default">ปิด</button> 
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+				<br></br>
+				<!--<span><input type="checkbox" id="cbox_device4on" value="device4_on"> ตั้งเวลา</span>-->
+				<input type="checkbox" id="F4_1" value="F1_on" > ปุ๋ย 1</span>
+				<input type="checkbox" id="F4_2" value="F2_on" > ปุ๋ย 2</span>
+				<br></br>
+				<span >ตั้งเวลาเปิด</span>
+				<select id="sethouron4" class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+				</select> 
+				&nbsp;
+				<select id="setminon4"  class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+					<option value="32">32</option>
+					<option value="33">33</option>
+					<option value="34">34</option>
+					<option value="35">35</option>
+					<option value="36">36</option>
+					<option value="37">37</option>
+					<option value="38">38</option>
+					<option value="39">39</option>
+					<option value="40">40</option>
+					<option value="41">41</option>
+					<option value="42">42</option>
+					<option value="43">43</option>
+					<option value="44">44</option>
+					<option value="45">45</option>
+					<option value="46">46</option>
+					<option value="47">47</option>
+					<option value="48">48</option>
+					<option value="49">49</option>
+					<option value="50">50</option>
+					<option value="51">51</option>
+					<option value="52">52</option>
+					<option value="53">53</option>
+					<option value="54">54</option>
+					<option value="55">55</option>
+					<option value="56">56</option>
+					<option value="57">57</option>
+					<option value="58">58</option>
+					<option value="59">59</option>
+				</select>
+				&nbsp;
+				<select id="setsecon4" class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+					<option value="32">32</option>
+					<option value="33">33</option>
+					<option value="34">34</option>
+					<option value="35">35</option>
+					<option value="36">36</option>
+					<option value="37">37</option>
+					<option value="38">38</option>
+					<option value="39">39</option>
+					<option value="40">40</option>
+					<option value="41">41</option>
+					<option value="42">42</option>
+					<option value="43">43</option>
+					<option value="44">44</option>
+					<option value="45">45</option>
+					<option value="46">46</option>
+					<option value="47">47</option>
+					<option value="48">48</option>
+					<option value="49">49</option>
+					<option value="50">50</option>
+					<option value="51">51</option>
+					<option value="52">52</option>
+					<option value="53">53</option>
+					<option value="54">54</option>
+					<option value="55">55</option>
+					<option value="56">56</option>
+					<option value="57">57</option>
+					<option value="58">58</option>
+					<option value="59">59</option>
+				</select>
+				&nbsp;
+				<span id="showtime4" class="connect">ยังไม่ตั้งเวลา</span>
+				<br></br>
+				<!--<span><input type="checkbox" id="cbox_device4off" value="device4_off"> ตั้งเวลา</span>-->
+				<span>ตั้งเวลาปิด</span>&nbsp;
+				<select id="sethouroff4" class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+				</select> 
+				&nbsp;
+				<select id="setminoff4"  class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+					<option value="32">32</option>
+					<option value="33">33</option>
+					<option value="34">34</option>
+					<option value="35">35</option>
+					<option value="36">36</option>
+					<option value="37">37</option>
+					<option value="38">38</option>
+					<option value="39">39</option>
+					<option value="40">40</option>
+					<option value="41">41</option>
+					<option value="42">42</option>
+					<option value="43">43</option>
+					<option value="44">44</option>
+					<option value="45">45</option>
+					<option value="46">46</option>
+					<option value="47">47</option>
+					<option value="48">48</option>
+					<option value="49">49</option>
+					<option value="50">50</option>
+					<option value="51">51</option>
+					<option value="52">52</option>
+					<option value="53">53</option>
+					<option value="54">54</option>
+					<option value="55">55</option>
+					<option value="56">56</option>
+					<option value="57">57</option>
+					<option value="58">58</option>
+					<option value="59">59</option>
+				</select>
+				&nbsp;
+				<select id="setsecoff4"  class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+					<option value="32">32</option>
+					<option value="33">33</option>
+					<option value="34">34</option>
+					<option value="35">35</option>
+					<option value="36">36</option>
+					<option value="37">37</option>
+					<option value="38">38</option>
+					<option value="39">39</option>
+					<option value="40">40</option>
+					<option value="41">41</option>
+					<option value="42">42</option>
+					<option value="43">43</option>
+					<option value="44">44</option>
+					<option value="45">45</option>
+					<option value="46">46</option>
+					<option value="47">47</option>
+					<option value="48">48</option>
+					<option value="49">49</option>
+					<option value="50">50</option>
+					<option value="51">51</option>
+					<option value="52">52</option>
+					<option value="53">53</option>
+					<option value="54">54</option>
+					<option value="55">55</option>
+					<option value="56">56</option>
+					<option value="57">57</option>
+					<option value="58">58</option>
+					<option value="59">59</option>
+				</select>
+				<button id="set-time4" class="btn btn-default">ตั้งเวลา</button>
+			</div>
+			<div id="Smart" class="tab-pane fade">
+				<h3>ระบบอัจฉริยะ</h3>
+				<span>ทำงานเมื่อความชื้นต่ำกว่า</span> 
+				<select id="setmoisture"  class="selectpicker col-2">
+					<option value="00">00</option>
+					<option value="10">10</option>
+					<option value="20">20</option>
+					<option value="30">30</option>
+					<option value="40">40</option>
+					<option value="50">50</option>
+					<option value="60">60</option>
+					<option value="70">70</option>
+					<option value="80">80</option>
+					<option value="90">90</option>
+					<option value="100">100</option>
+				</select>
+				<span>เปอร์เซ็นต์</span>
+				<br></br>
+				<span>เป็นเวลา</span>
+				<select id="settime"  class="selectpicker col-2">
+					<option value="05">05</option>
+					<option value="10">10</option>
+					<option value="15">15</option>
+					<option value="20">20</option>
+					<option value="25">25</option>
+					<option value="30">30</option>
+					<option value="35">35</option>
+					<option value="40">40</option>
+					<option value="45">45</option>
+					<option value="50">50</option>
+					<option value="55">55</option>
+				</select>
+				<span>นาที</span>
+				<br></br>
+
+				<span> วาว์ล 1</span> <input id="V1" data-onstyle="info" data-toggle="toggle" data-on="ON" data-off="OFF" type="checkbox"> 
+				<br></br>
+				<span> วาว์ล 2</span> <input id="V2" data-onstyle="info" data-toggle="toggle" data-on="ON" data-off="OFF" type="checkbox"> 
+				<br></br>
+				<span> วาว์ล 3</span> <input id="V3" data-onstyle="info" data-toggle="toggle" data-on="ON" data-off="OFF" type="checkbox"> 
+				<br></br> 
+				<span> วาว์ล 4</span> <input id="V4" data-onstyle="info" data-toggle="toggle" data-on="ON" data-off="OFF" type="checkbox"> 
+				<br></br>
+				<button id="Smart_Save" class="btn btn-default">บันทึก</button>
+			</div>
+
+		</div>
+
+	</div>
+
+
+</body>
+
+</html>
